@@ -1,0 +1,49 @@
+//@version=4
+study(title="KamleshR - Version 1.4", shorttitle="KamleshR 1.4")
+source = close
+
+fastLength = input(12, minval=1, title="Fast MM period")
+slowLength = input(26, minval=1, title="Slow MM period")
+signalLength = input(9, minval=1, title="Signal MM period")
+MacdEmaLength = input(9, minval=1, title="MACD EMA period")
+useEma = input(true, title="Use EMA (otherwise SMA)")
+useOldAlgo = input(false, title="Use Glaz algo (otherwise 'real' original zero lag)")
+showDots = input(true, title="Show symbols to indicate crossing")
+dotsDistance = input(1.5, minval=0.1, title="Symbols distance factor")
+
+ma1 = useEma ? ema(source, fastLength) : sma(source, fastLength)
+ma2 = useEma ? ema(ma1, fastLength) : sma(ma1, fastLength)
+zerolagEMA = ((2 * ma1) - ma2)
+
+mas1 = useEma ? ema(source, slowLength) : sma(source, slowLength)
+mas2 = useEma ? ema(mas1, slowLength) : sma(mas1, slowLength)
+zerolagslowMA = ((2 * mas1) - mas2)
+
+ZeroLagMACD = zerolagEMA - zerolagslowMA
+
+emasig1 = ema(ZeroLagMACD, signalLength)
+emasig2 = ema(emasig1, signalLength)
+signal = useOldAlgo ? sma(ZeroLagMACD, signalLength) : (2 * emasig1) - emasig2
+
+hist = ZeroLagMACD - signal
+
+upHist = hist > 0 ? hist : 0
+downHist = hist <= 0 ? hist : 0
+
+p1 = plot(upHist, color=color.green, transp=40, style=plot.style_columns)
+p2 = plot(downHist, color=color.purple, transp=40, style=plot.style_columns)
+
+zeroLine = plot(ZeroLagMACD, color=color.black, transp=0, linewidth=2)
+signalLine = plot(signal, color=color.gray, transp=0, linewidth=2)
+
+ribbonDiff = hist > 0 ? color.green : color.purple
+fill(zeroLine, signalLine, color=ribbonDiff)
+
+circleYPosition = signal * dotsDistance
+plot(ema(ZeroLagMACD, MacdEmaLength), color=color.red, transp=0, linewidth=2)
+
+ribbonDiff2 = hist > 0 ? color.green : color.purple
+plot(showDots and crossover(ZeroLagMACD, signal) ? circleYPosition : na, style=plot.style_circles, linewidth=4, color=ribbonDiff2)
+
+bgcolor(cross(ZeroLagMACD, signal) and crossover(ZeroLagMACD, signal) ? color.green : na, transp=90)
+bgcolor(cross(signal, ZeroLagMACD) and crossover(signal, ZeroLagMACD) ? color.red : na, transp=90)
